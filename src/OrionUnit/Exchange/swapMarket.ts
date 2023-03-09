@@ -66,6 +66,9 @@ export default async function swapMarket({
   const {
     orionBlockchain, orionAggregator, provider, chainId,
   } = orionUnit;
+  // exchangeContractAddress 0x927c99eaf573914c340220f25642a5523516d220
+  // matcherAddress 0xfbcad2c3a90fbd94c335fbdf8e22573456da7f68
+  // assetToAddress是bsc上各个token资产的地址
   const {
     exchangeContractAddress,
     matcherAddress,
@@ -88,7 +91,7 @@ export default async function swapMarket({
   if (feeAssetAddress === undefined) {
     throw new Error(`Fee asset '${feeAsset}' not found. Available assets: ${Object.keys(feeAssets).join(', ')}`);
   }
-
+  // 0x00000000000000 代表的是链上token
   const balances = await getBalances(
     {
       [assetIn]: assetInAddress,

@@ -19,14 +19,16 @@ export default async function getBalance(
   let assetWalletBalance: ethers.BigNumber | undefined;
 
   let denormalizedAssetInWalletBalance: BigNumber | undefined;
-
+  // 是不是本链货币(bsc:BNB ether:ETH)
   if (!assetIsNativeCryptocurrency) {
+    // 不是本地货币,加载ERC20的token
     const assetContract = ERC20__factory.connect(assetAddress, provider);
     const assetDecimals = await assetContract.decimals();
     assetWalletBalance = await assetContract.balanceOf(walletAddress);
 
     denormalizedAssetInWalletBalance = denormalizeNumber(assetWalletBalance, assetDecimals);
   } else {
+    // 直接获取本地余额
     assetWalletBalance = await provider.getBalance(walletAddress);
     denormalizedAssetInWalletBalance = denormalizeNumber(assetWalletBalance, NATIVE_CURRENCY_PRECISION);
   }
