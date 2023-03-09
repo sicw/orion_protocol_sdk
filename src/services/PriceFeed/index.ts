@@ -22,6 +22,7 @@ class PriceFeed {
     this.getTopPairStatistics = this.getTopPairStatistics.bind(this);
   }
 
+  // 获取蜡烛图
   getCandles = (
     symbol: string,
     timeStart: number,
@@ -39,6 +40,7 @@ class PriceFeed {
     return fetchWithValidation(url.toString(), candlesSchema);
   };
 
+  // 获取统计概览
   getStatisticsOverview = (exchange: Exchange | 'ALL' = 'ALL') => {
     const url = new URL(`${this.statisticsUrl}/overview`);
     url.searchParams.append('exchange', exchange);
@@ -46,6 +48,7 @@ class PriceFeed {
     return fetchWithValidation(url.toString(), statisticsOverviewSchema);
   }
 
+  // 获取top pair统计
   getTopPairStatistics = (exchange: Exchange | 'ALL' = 'ALL') => {
     const url = new URL(`${this.statisticsUrl}/top-pairs`);
     url.searchParams.append('exchange', exchange);

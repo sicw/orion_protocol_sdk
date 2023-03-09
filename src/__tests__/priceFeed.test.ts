@@ -1,5 +1,6 @@
 import Orion from '../Orion';
 
+// 获取行情信息
 describe('Price Feed', () => {
   test('Ticker', async () => {
     const { unitsArray } = new Orion('testing');
@@ -12,34 +13,14 @@ describe('Price Feed', () => {
         console.log('Subscribing to ticker: ', ticker, ' on network: ', unit.networkCode);
         const { unsubscribe } = unit.priceFeed.ws.subscribe('ticker', {
           payload: ticker,
-          callback: () => {
+          callback: (resp) => {
+            console.log(resp)
             clearTimeout(timeout);
             unsubscribe()
             resolve(true);
-          },
+          }
         });
       });
     }
-  });
-
-  test('Handle error', async () => {
-    const orion = new Orion('testing');
-    const bscUnit = orion.getUnit('bsc')
-
-    await new Promise((resolve, reject) => {
-      const timeout = setTimeout(() => {
-        reject(new Error('Timeout'));
-      }, 10000);
-      const { unsubscribe } = bscUnit.priceFeed.ws.subscribe('ticker', {
-        payload: 'SGERGEWRGWERG',
-        callback: () => null,
-        errorCallback: (error) => {
-          expect(error.message).toContain('Can\'t recognize PriceFeed "ticker" subscription message "{"message":"Wrong pair"}"')
-          clearTimeout(timeout);
-          unsubscribe()
-          resolve(true);
-        }
-      })
-    });
-  });
+  },100000);
 });

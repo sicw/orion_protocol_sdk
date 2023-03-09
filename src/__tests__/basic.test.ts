@@ -11,19 +11,25 @@ import {
 } from 'http-terminator';
 import { ethers } from 'ethers';
 
-jest.setTimeout(10000);
+// 断点调试时有可能超时, 设置的长一点
+jest.setTimeout(100000);
 
 const createServer = (externalHost: string) => {
   const app = express();
   const server = http.createServer(app);
 
   const httpTerminator = createHttpTerminator({ server });
+
+  // 创建WebSocketServer
   const wss = new WebSocket.Server({ server });
 
   let externalWs: WebSocket | null = null;
 
+  // 监听connection
   wss.on('connection', (ws, req) => {
     if (req.url === undefined) throw new Error('req.url is undefined');
+
+    // 这里做了一个转发,转到外部url
     const targetUrl = httpToWS(`${externalHost}${req.url}`);
     externalWs = new WebSocket(targetUrl);
 
@@ -69,6 +75,7 @@ const createServer = (externalHost: string) => {
 
   return {
     port: address?.port,
+    // 在test方法的结尾调用了该操作,停止所有服务.
     terminate: async () => {
       externalWs?.close();
       await closeWS();
@@ -84,16 +91,18 @@ describe('Orion', () => {
     expect(orion.unitsArray.length).toBe(4); // eth, bsc, polygon, fantom
 
     const orionUnitBSC = orion.units[SupportedChainId.BSC_TESTNET];
+
     expect(orionUnitBSC?.chainId).toBe(SupportedChainId.BSC_TESTNET);
     // expect(orionUnitBSC?.env).toBe('testing');
     expect(orion.getSiblingsOf(SupportedChainId.BSC_TESTNET)).toHaveLength(3);
     expect(orionUnitBSC?.networkCode).toBe('bsc');
 
-    const orionUnitRopsten = orion.units[SupportedChainId.ROPSTEN]
-    expect(orionUnitRopsten?.chainId).toBe(SupportedChainId.ROPSTEN);
+    // Ropsten 测试网络关闭
+    // const orionUnitRopsten = orion.units[SupportedChainId.ROPSTEN]
+    // expect(orionUnitRopsten?.chainId).toBe(SupportedChainId.ROPSTEN);
     // expect(orionUnitRopsten?.env).toBe('testing');
-    expect(orion.getSiblingsOf(SupportedChainId.ROPSTEN)).toHaveLength(3);
-    expect(orionUnitRopsten?.networkCode).toBe('eth');
+    // expect(orion.getSiblingsOf(SupportedChainId.ROPSTEN)).toHaveLength(3);
+    // expect(orionUnitRopsten?.networkCode).toBe('eth');
 
     const orionUnitPolygon = orion.units[SupportedChainId.POLYGON_TESTNET];
     expect(orionUnitPolygon?.chainId).toBe(SupportedChainId.POLYGON_TESTNET);
@@ -212,6 +221,8 @@ describe('Orion', () => {
     expect(priceData).toBeDefined();
 
     const allTickersDone = await new Promise<boolean>((resolve, reject) => {
+
+      // 订阅allTickers(获取所有行情信息)
       const { unsubscribe } = orionUnit.priceFeed.ws.subscribe(
         'allTickers',
         {
@@ -222,10 +233,12 @@ describe('Orion', () => {
           }
         }
       )
+
+      // 订阅allTickers后超时没响应,取消订阅
       const timeout = setTimeout(() => {
         unsubscribe();
         reject(new Error(`Timeout: ${orionUnit.priceFeed.wsUrl}`));
-      }, 10000);
+      }, 100000);
     });
     expect(allTickersDone).toBe(true);
 
@@ -273,14 +286,18 @@ describe('Orion', () => {
 
       orionUnitBSC.orionAggregator.ws.subscribe('aobus', {
         payload: 'ORN-USDT',
-        callback: () => {
+        callback: (resp) => {
+          console.log(resp)
           resolve(true);
           orionUnitBSC.orionAggregator.ws.destroy();
           clearTimeout(timeout);
         }
       })
     });
+
     expect(aobusDone).toBe(true);
+
+    // 获取31天的蜡烛图数据
     const candles = await simpleFetch(orionUnitBSC.priceFeed.getCandles)(
       'BTC-USDT',
       Math.floor((Date.now() - 1000 * 60 * 60 * 24 * 30) / 1000), // 1 month ago
@@ -327,4 +344,21 @@ describe('Orion', () => {
     const orionUnitBSCMainnet = orionMainnet.getUnit('bsc');
     expect(orionUnitBSCMainnet.chainId).toBe(SupportedChainId.BSC);
   })
+
+  test('Orion Bsc Test BNB-USDT Responses', async () => {
+    const orion = new Orion('testing');
+    const orionUnitBSC = orion.units[SupportedChainId.BSC_TESTNET]
+    if (!orionUnitBSC) {
+      throw new Error('Orion unit not found');
+    }
+    // 获取31天的蜡烛图数据
+    const candles = await simpleFetch(orionUnitBSC.priceFeed.getCandles)(
+        'BNB-USDT',
+        Math.floor((Date.now() - 1000 * 60 * 60 * 24 * 30) / 1000), // 1 month ago
+        Math.floor(Date.now() / 1000), // now
+        '1d'
+    );
+    expect(candles).toBeDefined();
+  });
+
 });
